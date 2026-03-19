@@ -16,8 +16,13 @@ type Repository struct {
 	UrlRepository
 }
 
-func NewRepository(db *sql.DB) *Repository {
+func NewPostgresRepository(db *sql.DB) *Repository {
 	return &Repository{
 		UrlRepository: NewUrlRepo(db),
+	}
+}
+func NewMemoryRepository() *Repository {
+	return &Repository{
+		UrlRepository: NewMemoryRepo(),
 	}
 }
