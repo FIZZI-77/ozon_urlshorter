@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -19,26 +21,40 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func main() {
+var StorageType = flag.String("n", "postgres", "choose storage postgres/memory")
 
+func main() {
 	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	db, err := pkg.NewPostgresDB(pkg.Config{
-		Host:     os.Getenv("HOST"),
-		Port:     os.Getenv("PORT"),
-		Username: os.Getenv("DB_USERNAME"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DbName:   os.Getenv("DB_NAME"),
-		SSLMode:  os.Getenv("SSLMODE"),
-	})
-	defer db.Close()
-	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
+	flag.Parse()
+	var repo *repository.Repository
+
+	switch *StorageType {
+	case "postgres":
+		db, err := pkg.NewPostgresDB(pkg.Config{
+			Host:     os.Getenv("HOST"),
+			Port:     os.Getenv("PORT"),
+			Username: os.Getenv("DB_USERNAME"),
+			Password: os.Getenv("DB_PASSWORD"),
+			DbName:   os.Getenv("DB_NAME"),
+			SSLMode:  os.Getenv("SSLMODE"),
+		})
+		defer func() {
+			if err := db.Close(); err != nil {
+				log.Printf("Error closing database: %v", err)
+			}
+		}()
+		if err != nil {
+			log.Fatalf("Error connecting to database: %v", err)
+		}
+		repo = repository.NewPostgresRepository(db)
+	case "memory":
+		repo = repository.NewMemoryRepository()
+		fmt.Println("using memory storage")
 	}
 
-	repo := repository.NewRepository(db)
 	services := service.NewService(repo)
 	handl := handler.NewHandler(services)
 
@@ -55,18 +71,15 @@ func main() {
 
 	}()
 
-	log.Printf("Server started on port %s", os.Getenv("PORT_SERVER"))
+	log.Printf("Server started on port %s", os.Getenv("SERVER_PORT"))
 
 	wg.Wait()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err = srv.shutdown(shutdownCtx); err != nil {
+	if err := srv.shutdown(shutdownCtx); err != nil {
 		log.Printf("Error shutting down server: %v", err)
-	}
-	if err = db.Close(); err != nil {
-		log.Printf("Error closing database: %v", err)
 	}
 
 }
