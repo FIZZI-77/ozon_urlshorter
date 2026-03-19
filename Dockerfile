@@ -20,7 +20,7 @@ WORKDIR /app
 
 COPY --from=build /app/server .
 
-COPY .env ./
+COPY src/ ./
 
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 
