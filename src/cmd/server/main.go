@@ -9,11 +9,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"ozon/pkg"
 	"ozon/src/core/handler"
 	"ozon/src/core/repository"
 	"ozon/src/core/service"
-	"sync"
+	"syscall"
 	"time"
 )
 
@@ -60,11 +61,10 @@ func main() {
 
 	srv := new(Server)
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		defer wg.Done()
 		if err := srv.run(os.Getenv("SERVER_PORT"), handl.InitRoutes()); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("Error starting server: %v", err)
 		}
@@ -73,15 +73,19 @@ func main() {
 
 	log.Printf("Server started on port %s", os.Getenv("SERVER_PORT"))
 
-	wg.Wait()
+	<-quit
+	log.Println("Shutdown signal received")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
 
-	if err := srv.shutdown(shutdownCtx); err != nil {
+	log.Println("Shutting down server...")
+
+	if err := srv.shutdown(ctx); err != nil {
 		log.Printf("Error shutting down server: %v", err)
 	}
 
+	log.Println("Server stopped")
 }
 
 func (s *Server) run(port string, handler http.Handler) error {
