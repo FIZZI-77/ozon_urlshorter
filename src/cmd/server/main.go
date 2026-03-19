@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -20,7 +21,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-var StorageType = flag.String("storageType", "postgres", "choose storage postgres/memory")
+var StorageType = flag.String("n", "postgres", "choose storage postgres/memory")
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
@@ -51,6 +52,7 @@ func main() {
 		repo = repository.NewPostgresRepository(db)
 	case "memory":
 		repo = repository.NewMemoryRepository()
+		fmt.Println("using memory storage")
 	}
 
 	services := service.NewService(repo)
@@ -69,7 +71,7 @@ func main() {
 
 	}()
 
-	log.Printf("Server started on port %s", os.Getenv("PORT_SERVER"))
+	log.Printf("Server started on port %s", os.Getenv("SERVER_PORT"))
 
 	wg.Wait()
 
