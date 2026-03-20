@@ -24,4 +24,4 @@ COPY .env ./
 
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 
-CMD ["./server", "-n", "postgres"]
+CMD ["./server", "-n", "memory"]
