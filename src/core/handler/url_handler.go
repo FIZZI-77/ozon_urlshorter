@@ -40,5 +40,5 @@ func (h *Handler) GetOriginal(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Redirect(http.StatusFound, url)
+	c.JSON(http.StatusFound, gin.H{"url": url})
 }

@@ -8,13 +8,15 @@ import (
 )
 
 type MemoryStore struct {
-	mu   sync.RWMutex
-	data map[string]string
+	mu              sync.RWMutex
+	originalToShort map[string]string
+	shortToOriginal map[string]string
 }
 
 func NewMemoryRepo() *MemoryStore {
 	return &MemoryStore{
-		data: make(map[string]string),
+		originalToShort: make(map[string]string),
+		shortToOriginal: make(map[string]string),
 	}
 }
 
@@ -22,8 +24,8 @@ func (m *MemoryStore) Create(ctx context.Context, link *models.Link) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.data[link.Short] = link.URL
-	m.data[link.URL] = link.Short
+	m.shortToOriginal[link.Short] = link.URL
+	m.originalToShort[link.URL] = link.Short
 
 	return nil
 
@@ -33,7 +35,7 @@ func (m *MemoryStore) GetByShort(ctx context.Context, shortUrl string) (*models.
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	url, ok := m.data[shortUrl]
+	url, ok := m.shortToOriginal[shortUrl]
 	if !ok {
 		return nil, sql.ErrNoRows
 	}
@@ -50,7 +52,7 @@ func (m *MemoryStore) GetByURL(ctx context.Context, url string) (*models.Link, e
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	short, ok := m.data[url]
+	short, ok := m.originalToShort[url]
 	if !ok {
 		return nil, sql.ErrNoRows
 	}
